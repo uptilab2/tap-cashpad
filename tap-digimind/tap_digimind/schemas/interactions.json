@@ -1,0 +1,70 @@
+{
+    "type": ["null", "object"],
+    "additionalProperties": false,
+    "properties": {
+        "date": {
+          "type": "string",
+          "format": "date"
+        },
+        "network": {
+          "type": "string"
+        },
+        "actor_id": {
+          "type": "string"
+        },
+        "source_id": {
+          "type": "string"
+        },
+        "facebook_shares": {
+            "type": ["null", "integer"]
+        },
+        "facebook_likes": {
+            "type": ["null", "integer"]
+        },
+        "facebook_comments": {
+            "type": ["null", "integer"]
+        },
+        "twitter_likes": {
+            "type": ["null", "integer"]
+        },
+        "twitter_retweets": {
+            "type": ["null", "integer"]
+        },
+        "twitter_replies": {
+            "type": ["null", "integer"]
+        },
+        "instagram_likes": {
+            "type": ["null", "integer"]
+        },
+        "instagram_replies": {
+            "type": ["null", "integer"]
+        },
+        "instagram_comments": {
+            "type": ["null", "integer"]
+        },
+        "pinterest_likes": {
+            "type": ["null", "integer"]
+        },
+        "pinterest_repins": {
+            "type": ["null", "integer"]
+        },
+        "pinterest_comments": {
+            "type": ["null", "integer"]
+        },
+        "linkedin_likes": {
+            "type": ["null", "integer"]
+        },
+        "linkedin_comments": {
+            "type": ["null", "integer"]
+        },
+        "youtube_likes": {
+            "type": ["null", "integer"]
+        },
+        "youtube_views": {
+            "type": ["null", "integer"]
+        },
+        "youtube_comments": {
+            "type": ["null", "integer"]
+        }
+    }
+}
