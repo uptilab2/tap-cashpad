@@ -3,7 +3,7 @@ import os
 import json
 
 import singer
-from singer import utils, metadata
+from singer import utils
 from singer.catalog import Catalog, CatalogEntry
 from singer.schema import Schema
 
@@ -12,10 +12,7 @@ from requests.adapters import HTTPAdapter, Retry
 
 from typing import List, Dict
 from datetime import datetime
-import logging
 
-
-logger = logging.getLogger(__name__)
 
 REQUIRED_CONFIG_KEYS = ["installation_id", "apiuser_email", "apiuser_token"]
 VERSION = "v2"
@@ -81,12 +78,13 @@ def get_closure_list(config: Dict, start_sequential_id: int = None) -> List:
         "apiuser_email": config.get("apiuser_email"),
         "apiuser_token": config.get("apiuser_token"),
     }
-
     if start_sequential_id:
         params["start_sequential_id"] = start_sequential_id + 1 # Add 1 to get next id
 
     closure_list = []
     response = requests_session.get(archive_url, params=params)
+    LOGGER.info(f"response status code is : {response.status_code}")
+    LOGGER.info(f"response is : {response.text}")
 
     if response.status_code == 200:
         for row in response.json().get("data"):
@@ -152,10 +150,13 @@ def get_closed(config: Dict, closure_list: List) -> List:
         }
         response = requests_session.get(archive_content, params=params)
 
+        LOGGER.info(f"response status code is : {response.status_code}")
+        LOGGER.info(f"response is : {response.text}")
+
         if response.status_code == 200:
             content_list.append(response.json().get("data"))
         elif response.status_code == 400:
-            logger.error(f"The sequential_id: {closed.get('sequential_id')} requested doesn't exist")
+            LOGGER.error(f"The sequential_id: {closed.get('sequential_id')} requested doesn't exist")
             continue
     return content_list
 
