@@ -208,8 +208,11 @@ def sync(config: Dict, state: Dict, catalog: object) -> None:
         max_bookmark = None
         for row in tap_data:
             row["ingestion_date"] = batch_write_timestamp
-            print("is closed : ", row.get("is_closed"))
+            print("is closed deux : ", row.get("is_closed"))
             row["is_closed"] = row.get("is_closed") if row.get("is_closed") is False else True
+            print("stream.tap_stream_id is ", stream.tap_stream_id)
+            print("[row] is ", row)
+
             # Write row to the stream for target :
             singer.write_records(stream.tap_stream_id, [row])
             if bookmark_column and row.get("is_closed"):
