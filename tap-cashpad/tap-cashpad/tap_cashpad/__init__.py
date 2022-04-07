@@ -172,10 +172,12 @@ def sync(config: Dict, state: Dict, catalog: object) -> None:
         bookmark_column = stream.replication_key
         tap_data = []
         is_sorted = True
-
+        start_sequential_id = None
         # Here we get list of closed data, that means the data retrived by this function are unmutable and can be
         # ingested by target safely
-        closure_list = get_closure_list(config, state.get("value").get(stream.tap_stream_id))
+        if state.get("value"):
+            start_sequential_id = state.get("value").get(stream.tap_stream_id)
+        closure_list = get_closure_list(config, start_sequential_id)
 
         # Here we get list of ongoing data, that means the data retrived by this function are mutable and can change by
         # the time you call Cashpad API. We mark these data as not closed and append them to the target write.
