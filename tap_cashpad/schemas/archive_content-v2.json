@@ -1,0 +1,633 @@
+{
+	"title": "archive_content",
+	"type": ["null", "object"],
+    "additionalProperties": false,
+    "properties": {
+		"ingestion_date": {
+			"type": ["null", "string"]
+		},
+		"is_closed": {
+			"type": ["null", "boolean"]
+		},
+		"total_sales": {
+	    	"type": ["null", "object"],
+			"sales_incl_taxes": {
+				"type": ["null", "integer"]
+			},
+			"sales_excl_taxes": {
+				"type": ["null", "integer"]
+			},
+			"nb_receipts": {
+				"type": ["null", "integer"]
+			},
+			"nb_seats": {
+				"type": ["null", "integer"]
+			},
+			"taxes": {
+				"type": "array",
+				"items": {
+					"type": "object",
+					"properties": {
+						"rate": {
+							"type": [
+								"null",
+								"number"
+							]
+						},
+						"amount": {
+							"type": [
+								"null",
+								"number"
+							]
+						},
+						"external_id": {
+							"type": [
+								"null",
+								"string"
+							]
+						}
+					}
+				}
+			}
+		},
+		"sales": {
+	    	"type": ["null", "object"],
+			"taxes": {
+				"type": "array",
+				"items": {
+					"type": "object",
+					"properties": {
+						"rate": {
+							"type": [
+								"null",
+								"number"
+							]
+						},
+						"amount": {
+							"type": [
+								"null",
+								"number"
+							]
+						},
+						"external_id": {
+							"type": [
+								"null",
+								"string"
+							]
+						}
+					}
+				}
+			}
+		},
+		"receipts": {
+			"type": "array",
+			"default": [],
+			"items":{
+				"type": ["null", "object"],
+				"properties": {
+					"id": {
+						"type": ["null", "string"]
+					},
+					"sequential_id": {
+						"type": ["null", "integer"]
+					},
+					"period_id": {
+						"type": ["null", "integer"]
+					},
+					"date_created": {
+						"type": ["null", "string"]
+					},
+					"date_closed": {
+						"type": ["null", "string"]
+					},
+					"snapshot": {
+						"type": ["null", "string"]
+					},
+					"owner": {
+						"type": ["null", "object"],
+						"id": {
+							"type": ["null", "string"]
+						},
+						"name": {
+							"type": ["null", "string"]
+						},
+						"external_id": {
+							"type": ["null", "string"]
+						}
+					},
+					"location": {
+						"type": ["null", "object"],
+						"id": {
+							"type": ["null", "string"]
+						},
+						"name": {
+							"type": ["null", "string"]
+						},
+						"external_id": {
+							"type": ["null", "string"]
+						}
+					},
+					"table": {
+						"type": ["null", "number"]
+					},
+					"notes": {
+						  "type": "array",
+						  "default": [],
+						  "items": {
+							"type": ["null", "string"]
+						  }
+					},
+					"discount": {
+						"type": ["null", "object"],
+						"predefineddiscount": {
+							"type": ["null", "object"],
+							"id": {
+								"type": ["null", "string"]
+							},
+							"name": {
+								"type": ["null", "string"]
+							},
+							"external_id": {
+								"type": ["null", "string"]
+							}
+						},
+						"offered": {
+							"type": ["null", "boolean"]
+						},
+						"discount_amount": {
+							"type": ["null", "number"]
+						},
+						"discount_percentage": {
+							"type": ["null", "number"]
+						},
+						"discount_total": {
+							"type": ["null", "number"]
+						}
+					},
+					"cancelled": {
+						"type": ["null", "boolean"]
+					},
+					"cancellation_reason": {
+						"type": ["null", "string"]
+					},
+					"loyaltycard": {
+						"type": ["null", "string"]
+					},
+					"customer": {
+						"type": ["null", "object"],
+						"id": {
+							"type": ["null", "string"]
+						}
+					},
+					"payments": {
+						"type": "array",
+						"default": [],
+						"items": {
+							"type": "object",
+							"properties": {
+								"amount": {
+									"type": [
+										"null",
+										"number"
+									]
+								},
+								"date": {
+									"type": [
+										"null",
+										"string"
+									]
+								},
+								"user": {
+									"type": ["null", "object"],
+									"id": {
+										"type": ["null", "string"]
+									},
+									"name": {
+										"type": ["null", "string"]
+									},
+									"external_id": {
+										"type": ["null", "string"]
+									}
+								},
+								"paymentmethod": {
+									"type": ["null", "object"],
+									"id": {
+										"type": ["null", "string"]
+									},
+									"name": {
+										"type": ["null", "string"]
+									},
+									"external_id": {
+										"type": ["null", "string"]
+									}
+								},
+								"lunch_voucher": {
+									"type": ["null", "string"]
+								}
+							}
+						}
+					},
+					"items": {
+						"type": "array",
+						"default": [],
+						"items": {
+							"type": "object",
+							"properties": {
+								"id": {
+									"type": [
+										"null",
+										"string"
+									]
+								},
+								"type": {
+									"type": [
+										"null",
+										"string"
+									],
+									"enum": ["menu", "product"]
+								},
+								"quantity": {
+									"type": [
+										"null",
+										"number"
+									]
+								},
+								"unit_price": {
+									"type": [
+										"null",
+										"number"
+									]
+								},
+								"final_price": {
+									"type": [
+										"null",
+										"number"
+									]
+								},
+								"product": {
+									"type": ["null", "object"],
+									"id": {
+										"type": ["null", "string"]
+									},
+									"name": {
+										"type": ["null", "string"]
+									},
+									"external_id": {
+										"type": ["null", "string"]
+									}
+								},
+								"discount": {
+									"type": ["null", "object"],
+									"predefineddiscount": {
+										"type": ["null", "object"],
+										"id": {
+											"type": ["null", "string"]
+										},
+										"name": {
+											"type": ["null", "string"]
+										},
+										"external_id": {
+											"type": ["null", "string"]
+										}
+									},
+									"offered": {
+										"type": ["null", "boolean"]
+									},
+									"discount_amount": {
+										"type": ["null", "number"]
+									},
+									"discount_percentage": {
+										"type": ["null", "number"]
+									},
+									"discount_total": {
+										"type": ["null", "number"]
+									}
+								},
+								"menu": {
+									"type": ["null", "string"]
+								},
+								"taxes": {
+									"type": "array",
+									"default": [],
+									"items": {
+										"type": "object",
+										"properties": {
+											"rate": {
+												"type": [
+													"null",
+													"number"
+												]
+											},
+											"amount": {
+												"type": [
+													"null",
+													"number"
+												]
+											},
+											"external_id": {
+												"type": [
+													"null",
+													"string"
+												]
+											}
+										}
+									}
+								},
+								"addons": {
+									"type": "array",
+									"default": [],
+									"items": {
+										"type": "object",
+										"properties": {
+											"addon": {
+												"type": ["null", "object"],
+												"id": {
+													"type": ["null", "string"]
+												},
+												"name": {
+													"type": ["null", "string"]
+												},
+												"external_id": {
+													"type": ["null", "string"]
+												}
+											},
+											"product": {
+												"type": ["null", "object"],
+												"id": {
+													"type": ["null", "string"]
+												},
+												"name": {
+													"type": ["null", "string"]
+												},
+												"external_id": {
+													"type": ["null", "string"]
+												}
+											},
+											"unit_price": {
+												"type": [
+													"null",
+													"number"
+												]
+											},
+											"quantity": {
+												"type": [
+													"null",
+													"number"
+												]
+											}
+										}
+									}
+								}
+							},
+							"notes": {
+								  "type": "array",
+								  "default": [],
+								  "items": {
+									"type": ["null", "string"]
+								  }
+							}
+						},
+						"total_with_taxes": {
+							"type": [
+								"null",
+								"number"
+							]
+						},
+						"taxes": {
+							"type": "array",
+							"default": [],
+							"items": {
+								"type": "object",
+								"properties": {
+									"rate": {
+										"type": [
+											"null",
+											"number"
+										]
+									},
+									"amount": {
+										"type": [
+											"null",
+											"number"
+										]
+									},
+									"external_id": {
+										"type": [
+											"null",
+											"string"
+										]
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"id": {
+			"type": ["null", "string"]
+		},
+		"sequential_id": {
+			"type": ["null", "integer"]
+		},
+		"date_created": {
+			"type": ["null", "string"]
+		},
+		"user": {
+			"type": ["null", "object"],
+			"id": {
+				"type": ["null", "string"]
+			},
+			"name": {
+				"type": ["null", "string"]
+			},
+			"external_id": {
+				"type": ["null", "string"]
+			}
+		},
+		"range_begin_date": {
+			"type": ["null", "string"]
+		},
+		"range_end_date": {
+			"type": ["null", "string"]
+		},
+		"nb_receipts": {
+			"type": ["null", "integer"]
+		},
+		"nb_cancelled_receipts": {
+			"type": ["null", "integer"]
+		},
+		"nb_seats": {
+			"type": ["null", "integer"]
+		},
+		"payments": {
+			"type": "array",
+			"default": [],
+			"items": {
+				"type": "object",
+				"properties": {
+					"paymentmethod": {
+						"type": ["null", "object"],
+						"id": {
+							"type": ["null", "string"]
+						},
+						"name": {
+							"type": ["null", "string"]
+						},
+						"external_id": {
+							"type": ["null", "string"]
+						}
+					},
+					"amount": {
+						"type": [
+							"null",
+							"number"
+						]
+					},
+					"nb_operations": {
+						"type": ["null", "integer"]
+					}
+				}
+			}
+		}
+	}
+}
+
+
+class Node:
+    def __init__(self, key: str, parent = None):
+        self.parent = parent
+        if parent:
+            parent.set_child(self)
+        self.child = None
+        self.key = key
+
+    def set_child(self, child):
+        self.child = child
+
+    def key_nodes_list(self, excluded_keys={}):
+        list = []
+        parent = self.parent
+
+        list = [self.key] if self.key not in excluded_keys else list
+
+
+        have_parent = True if self.parent else False
+        while have_parent:
+            if isinstance(parent, Node):
+                if parent.key not in excluded_keys:
+                    list.append(parent.key)
+                parent = parent.parent
+            else:
+                have_parent = False
+
+        return list[::-1]
+
+
+A = {
+    "key1": {
+        "key11": None,
+        "taxes": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "rate": {
+                        "type": [
+                            "null",
+                            "number"
+                        ]
+                    },
+                    "amount": {
+                        "type": [
+                            "null",
+                            "number"
+                        ]
+                    },
+                    "external_id": {
+                        "type": [
+                            "null",
+                            "string"
+                        ]
+                    }
+                }
+            }
+        }
+
+    },
+    "key2": None
+}
+B = {
+    "key1": {
+        "key12": [
+            {
+                "key121": None,
+                "key122": None,
+                "key123": None,
+            }
+        ],
+        "key13": 9,
+    },
+    "key2": None
+}
+
+from copy import deepcopy
+
+
+def data_validator(A, key_list):
+    schema_key_checker = None
+
+    for key in key_list:
+        if key in A.keys():
+            A = A.get(key)
+        else:
+            return "faut supprimer"
+    return "ok"
+
+
+def dict_parser(input, parent_node=[], node_list=[]):
+    key_list = input.keys()
+    is_dict = isinstance(input, dict)
+    new_node = None
+
+    for key in key_list:
+        if key in key_list:
+            if isinstance(input, dict):
+                new_input = input.get(key)
+                new_node = Node(key, parent_node)
+                node_list.append(new_node)
+
+            input_strategy(new_input, parent_node=new_node, node_list=node_list)
+    return node_list
+
+
+def list_parser(input, parent_node, node_list):
+    for element in input:
+        input_strategy(element, parent_node, node_list=node_list)
+
+    return
+
+
+def input_strategy(input, parent_node=None, trace=[], node_list=[]):
+    if isinstance(input, dict):
+        trace = dict_parser(input, parent_node, node_list=node_list)
+
+    elif isinstance(input, list):
+        trace = list_parser(input, parent_node, node_list=node_list)
+
+    return trace
+
+
+verified = input_strategy(A)
+final_traces = []
+
+excluded_keys = {"type", "items", "properties"}
+
+for verif in verified:
+    if verif.key not in excluded_keys:
+        final_traces.append(verif.key_nodes_list(excluded_keys))
+
+print("final_trace is : ", final_trace)
+
+for trace in final_traces:
+    print(data_validator(B, trace))

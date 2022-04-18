@@ -13,7 +13,6 @@ from requests.adapters import HTTPAdapter, Retry
 from typing import List, Dict
 from datetime import datetime
 
-
 REQUIRED_CONFIG_KEYS = ["installation_id", "apiuser_email", "apiuser_token"]
 VERSION = "v2"
 BASE_URL = f"https://preprod.cashpad.net/api/salesdata/{VERSION}/"
@@ -24,6 +23,105 @@ requests_session = requests.Session()
 http_retry_codes = (500, 502, 503, 504, 506, 507, 520, 521, 522, 523, 524, 525, 527, 429, 444, 498, 499)
 requests_retries = Retry(total=5, backoff_factor=10, status_forcelist=http_retry_codes)
 requests_session.mount('', HTTPAdapter(max_retries=requests_retries))
+
+
+class Node:
+    """Node represents the keys of a schema and link a key to its parent. It is useful to get a list of parents for
+    a given key"""
+
+    def __init__(self, key: str, parent=None):
+        self.parent = parent
+        if parent:
+            parent.set_child(self)
+        self.child = None
+        self.key = key
+
+    def set_child(self, child):
+        """this method is to change a parent's child"""
+        self.child = child
+
+    def key_nodes_list(self, excluded_keys={}):
+        """This method give for a node all the genealogy of its familly sorted from the eldest parents to the node
+        itself """
+        list = []
+        parent = self.parent
+
+        list = [self.key] if self.key not in excluded_keys else list
+
+        have_parent = True if self.parent else False
+        while have_parent:
+            if isinstance(parent, Node):
+                if parent.key not in excluded_keys:
+                    list.append(parent.key)
+                parent = parent.parent
+            else:
+                have_parent = False
+
+        return list[::-1]
+
+
+def data_validator(schema, key_list):
+    """Compare a list of keys tracing the parents of an element to a schema.
+    It works by checking each key exist in the schema. And each path exist in the schema"""
+
+    for key in key_list:
+        if key in schema.keys():
+            schema = schema.get(key)
+        else:
+            return "faut supprimer"
+    return "ok"
+
+
+def dict_parser(input, parent_node=[], node_list=[]):
+    """Parse a dict to extract for each key it's parents and instanciate a node for each keys linked to its parents"""
+    key_list = input.keys()
+    new_node = None
+
+    for key in key_list:
+        if key in key_list:
+            if isinstance(input, dict):
+                new_input = input.get(key)
+                new_node = Node(key, parent_node)
+                node_list.append(new_node)
+
+            input_strategy(new_input, parent_node=new_node, node_list=node_list)
+    return node_list
+
+
+def list_parser(input, parent_node, node_list):
+    """Parse a list in order to check for each elements the keys it contains"""
+    for element in input:
+        input_strategy(element, parent_node, node_list=node_list)
+
+    return
+
+
+def input_strategy(input, parent_node=None, trace=[], node_list=[]):
+    """Decide which parsing strategy we should follow checking whether the input is a list or a dict"""
+    if isinstance(input, dict):
+        trace = dict_parser(input, parent_node, node_list=node_list)
+
+    elif isinstance(input, list):
+        list_parser(input, parent_node, node_list=node_list)
+
+    return trace
+
+# TODO implement this in code to check response.json from api is valid, for each unexpected row we delete the key from the response before singer.write
+schema = {}
+data = {}
+verified = input_strategy(schema)
+final_traces = []
+
+excluded_keys = {"type", "items", "properties"}
+
+for verif in verified:
+    if verif.key not in excluded_keys:
+        final_traces.append(verif.key_nodes_list(excluded_keys))
+
+print("final_trace is : ", final_traces)
+
+for trace in final_traces:
+    print(data_validator(data, trace))
 
 
 def get_abs_path(path: str) -> str:
@@ -79,7 +177,7 @@ def get_closure_list(config: Dict, start_sequential_id: int = None) -> List:
         "apiuser_token": config.get("apiuser_token"),
     }
     if start_sequential_id:
-        params["start_sequential_id"] = start_sequential_id + 1 # Add 1 to get next id
+        params["start_sequential_id"] = start_sequential_id + 1  # Add 1 to get next id
 
     closure_list = []
     response = requests_session.get(archive_url, params=params)
@@ -98,7 +196,7 @@ def get_closure_list(config: Dict, start_sequential_id: int = None) -> List:
     return closure_list
 
 
-def get_live_closing(config: Dict, sequential_id : int = None, version : int = None) -> Dict:
+def get_live_closing(config: Dict, sequential_id: int = None, version: int = None) -> Dict:
     """ Get content for not closed data. Data sent as output as not fully consolidated and can change in a later call
     We will add missing items to match archive_content.json schema and is_closed flag to false to mark these data are
     live """
@@ -208,11 +306,7 @@ def sync(config: Dict, state: Dict, catalog: object) -> None:
         max_bookmark = None
         for row in tap_data:
             row["ingestion_date"] = batch_write_timestamp
-            print("is closed deux : ", row.get("is_closed"))
             row["is_closed"] = row.get("is_closed") if row.get("is_closed") is False else True
-            print("stream.tap_stream_id is ", stream.tap_stream_id)
-            print("[row] is ", row)
-
             # Write row to the stream for target :
             singer.write_records(stream.tap_stream_id, [row])
             if bookmark_column and row.get("is_closed"):
