@@ -4,6 +4,9 @@ PRODUCTS_SUMMARY = {
     "type": ["null", "object"],
     "additionalProperties": False,
     "properties": {
+        "ingestion_date": {
+          "type": ["null", "string"]
+        },
         "id": { 
             "type": ["null", "string"]
         },

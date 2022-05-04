@@ -263,6 +263,29 @@ def get_closed(config: Dict, closure_list: List) -> List:
     return content_list
 
 
+def get_product_summary(config: Dict, closure_list: List) -> List:
+    """ Get product_summary """
+    products_summary = BASE_URL + config.get("installation_id") + "/products_summary"
+    content_list = []
+    for closed in closure_list:
+        params = {
+            "sequential_id": closed.get("sequential_id"),
+            "apiuser_email": config.get("apiuser_email"),
+            "apiuser_token": config.get("apiuser_token"),
+        }
+        response = requests_session.get(products_summary, params=params)
+
+        LOGGER.info(f"response status code is : {response.status_code}")
+        LOGGER.info(f"response is : {response.text}")
+
+        if response.status_code == 200:
+            content_list.append(response.json().get("data"))
+        elif response.status_code == 400:
+            LOGGER.error(f"The sequential_id: {closed.get('sequential_id')} requested doesn't exist")
+            continue
+    return content_list
+
+
 def sync(config: Dict, state: Dict, catalog: object) -> None:
     """ Sync data from tap source """
     # Loop over selected streams in catalog
@@ -297,8 +320,16 @@ def sync(config: Dict, state: Dict, catalog: object) -> None:
         if len(closure_list) == 0:
             LOGGER.info("No new closed data available")
         else:
+            data = None
+            if stream.tap_stream_id == 'products_summary':
+                data = get_product_summary(config, closure_list)
+            elif stream.tap_stream_id == 'archive_content':
+                data = get_closed(config, closure_list)
+            else:
+                LOGGER.error("Stream id not recognized")
+                raise Exception()
             # get_closed return a list of list so we just extend it in tap_data
-            tap_data.extend(get_closed(config, closure_list))
+            tap_data.extend(data)
 
         # live_data contain just one list we can append to tap_data
         # tap_data.append(live_data)
@@ -316,12 +347,14 @@ def sync(config: Dict, state: Dict, catalog: object) -> None:
             if bookmark_column and row.get("is_closed"):
                 if is_sorted:
                     # update bookmark to latest value
-                    singer.write_state({stream.tap_stream_id: row[bookmark_column]})
+                    singer.write_state({**state, stream.tap_stream_id: row[bookmark_column]})
                 else:
                     # if data unsorted, save max value until end of writes
                     max_bookmark = max(max_bookmark, row[bookmark_column])
         if bookmark_column and not is_sorted and row.get("is_closed"):
-            singer.write_state({stream.tap_stream_id: max_bookmark})
+            singer.write_state({**state, stream.tap_stream_id: max_bookmark})
+
+        LOGGER.info("Ending stream:" + stream.tap_stream_id)
     return
 
 
