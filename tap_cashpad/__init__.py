@@ -6,6 +6,7 @@ import singer
 from singer import utils
 from singer.catalog import Catalog, CatalogEntry
 from singer.schema import Schema
+from singer.transform import transform
 
 import requests
 from requests.adapters import HTTPAdapter, Retry
@@ -186,7 +187,6 @@ def get_closure_list(config: Dict, start_sequential_id: int = None) -> List:
     closure_list = []
     response = requests_session.get(archive_url, params=params)
     LOGGER.info(f"response status code is : {response.status_code}")
-    LOGGER.info(f"response is : {response.text}")
 
     if response.status_code == 200:
         for row in response.json().get("data"):
@@ -253,7 +253,6 @@ def get_closed(config: Dict, closure_list: List) -> List:
         response = requests_session.get(archive_content, params=params)
 
         LOGGER.info(f"response status code is : {response.status_code}")
-        LOGGER.info(f"response is : {response.text}")
 
         if response.status_code == 200:
             content_list.append(response.json().get("data"))
@@ -276,7 +275,6 @@ def get_product_summary(config: Dict, closure_list: List) -> List:
         response = requests_session.get(products_summary, params=params)
 
         LOGGER.info(f"response status code is : {response.status_code}")
-        LOGGER.info(f"response is : {response.text}")
 
         if response.status_code == 200:
             content_list.append(response.json().get("data"))
@@ -343,7 +341,7 @@ def sync(config: Dict, state: Dict, catalog: object) -> None:
             row["ingestion_date"] = batch_write_timestamp
             row["is_closed"] = row.get("is_closed") if row.get("is_closed") is False else True
             # Write row to the stream for target :
-            singer.write_records(stream.tap_stream_id, [row])
+            singer.write_records(stream.tap_stream_id, [transform(row, stream.schema.to_dict())])
             if bookmark_column and row.get("is_closed"):
                 if is_sorted:
                     # update bookmark to latest value
