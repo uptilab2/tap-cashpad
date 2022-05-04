@@ -341,7 +341,8 @@ def sync(config: Dict, state: Dict, catalog: object) -> None:
             row["ingestion_date"] = batch_write_timestamp
             row["is_closed"] = row.get("is_closed") if row.get("is_closed") is False else True
             # Write row to the stream for target :
-            singer.write_records(stream.tap_stream_id, [transform(row, stream.schema.to_dict())])
+            parsed_row = transform(row, stream.schema.to_dict())
+            singer.write_records(stream.tap_stream_id, [parsed_row])
             if bookmark_column and row.get("is_closed"):
                 if is_sorted:
                     # update bookmark to latest value

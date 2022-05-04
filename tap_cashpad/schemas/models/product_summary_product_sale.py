@@ -15,6 +15,9 @@ PRODUCT_SUMMARY_PRODUCT_SALE = {
             "type": ["null", "integer"],
         },
         "discount": DISCOUNT,
-        "taxes": TAX,
+        "taxes":{
+            "type": ["null", "array"],
+            "items": TAX,
+        },
     }
 }
