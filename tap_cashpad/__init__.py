@@ -13,6 +13,9 @@ from requests.adapters import HTTPAdapter, Retry
 from typing import List, Dict
 from datetime import datetime
 
+from .schemas import ARCHIVE_CONTENT
+
+
 REQUIRED_CONFIG_KEYS = ["installation_id", "apiuser_email", "apiuser_token"]
 VERSION = "v2"
 BASE_URL = f"https://preprod.cashpad.net/api/salesdata/{VERSION}/"
@@ -25,122 +28,122 @@ requests_retries = Retry(total=5, backoff_factor=10, status_forcelist=http_retry
 requests_session.mount('', HTTPAdapter(max_retries=requests_retries))
 
 
-class Node:
-    """Node represents the keys of a schema and link a key to its parent. It is useful to get a list of parents for
-    a given key"""
+# class Node:
+#     """Node represents the keys of a schema and link a key to its parent. It is useful to get a list of parents for
+#     a given key"""
 
-    def __init__(self, key: str, parent=None):
-        self.parent = parent
-        if parent:
-            parent.set_child(self)
-        self.child = None
-        self.key = key
+#     def __init__(self, key: str, parent=None):
+#         self.parent = parent
+#         if parent:
+#             parent.set_child(self)
+#         self.child = None
+#         self.key = key
 
-    def set_child(self, child):
-        """this method is to change a parent's child"""
-        self.child = child
+#     def set_child(self, child):
+#         """this method is to change a parent's child"""
+#         self.child = child
 
-    def key_nodes_list(self, excluded_keys={}):
-        """This method give for a node all the genealogy of its familly sorted from the eldest parents to the node
-        itself """
-        list = []
-        parent = self.parent
+#     def key_nodes_list(self, excluded_keys={}):
+#         """This method give for a node all the genealogy of its familly sorted from the eldest parents to the node
+#         itself """
+#         list = []
+#         parent = self.parent
 
-        list = [self.key] if self.key not in excluded_keys else list
+#         list = [self.key] if self.key not in excluded_keys else list
 
-        have_parent = True if self.parent else False
-        while have_parent:
-            if isinstance(parent, Node):
-                if parent.key not in excluded_keys:
-                    list.append(parent.key)
-                parent = parent.parent
-            else:
-                have_parent = False
+#         have_parent = True if self.parent else False
+#         while have_parent:
+#             if isinstance(parent, Node):
+#                 if parent.key not in excluded_keys:
+#                     list.append(parent.key)
+#                 parent = parent.parent
+#             else:
+#                 have_parent = False
 
-        return list[::-1]
-
-
-def data_validator(schema, key_list):
-    """Compare a list of keys tracing the parents of an element to a schema.
-    It works by checking each key exist in the schema. And each path exist in the schema"""
-
-    for key in key_list:
-        if key in schema.keys():
-            schema = schema.get(key)
-        else:
-            return "faut supprimer"
-    return "ok"
+#         return list[::-1]
 
 
-def dict_parser(input, parent_node=[], node_list=[]):
-    """Parse a dict to extract for each key it's parents and instanciate a node for each keys linked to its parents"""
-    key_list = input.keys()
-    new_node = None
+# def data_validator(schema, key_list):
+#     """Compare a list of keys tracing the parents of an element to a schema.
+#     It works by checking each key exist in the schema. And each path exist in the schema"""
 
-    for key in key_list:
-        if key in key_list:
-            if isinstance(input, dict):
-                new_input = input.get(key)
-                new_node = Node(key, parent_node)
-                node_list.append(new_node)
-
-            input_strategy(new_input, parent_node=new_node, node_list=node_list)
-    return node_list
+#     for key in key_list:
+#         if key in schema.keys():
+#             schema = schema.get(key)
+#         else:
+#             return "faut supprimer"
+#     return "ok"
 
 
-def list_parser(input, parent_node, node_list):
-    """Parse a list in order to check for each elements the keys it contains"""
-    for element in input:
-        input_strategy(element, parent_node, node_list=node_list)
+# def dict_parser(input, parent_node=[], node_list=[]):
+#     """Parse a dict to extract for each key it's parents and instanciate a node for each keys linked to its parents"""
+#     key_list = input.keys()
+#     new_node = None
 
-    return
+#     for key in key_list:
+#         if key in key_list:
+#             if isinstance(input, dict):
+#                 new_input = input.get(key)
+#                 new_node = Node(key, parent_node)
+#                 node_list.append(new_node)
 
-
-def input_strategy(input, parent_node=None, trace=[], node_list=[]):
-    """Decide which parsing strategy we should follow checking whether the input is a list or a dict"""
-    if isinstance(input, dict):
-        trace = dict_parser(input, parent_node, node_list=node_list)
-
-    elif isinstance(input, list):
-        list_parser(input, parent_node, node_list=node_list)
-
-    return trace
-
-# TODO implement this in code to check response.json from api is valid, for each unexpected row we delete the key from the response before singer.write
-schema = {}
-data = {}
-verified = input_strategy(schema)
-final_traces = []
-
-excluded_keys = {"type", "items", "properties"}
-
-for verif in verified:
-    if verif.key not in excluded_keys:
-        final_traces.append(verif.key_nodes_list(excluded_keys))
-
-print("final_trace is : ", final_traces)
-
-for trace in final_traces:
-    print(data_validator(data, trace))
+#             input_strategy(new_input, parent_node=new_node, node_list=node_list)
+#     return node_list
 
 
-def get_abs_path(path: str) -> str:
-    return os.path.join(os.path.dirname(os.path.realpath(__file__)), path)
+# def list_parser(input, parent_node, node_list):
+#     """Parse a list in order to check for each elements the keys it contains"""
+#     for element in input:
+#         input_strategy(element, parent_node, node_list=node_list)
+
+#     return
+
+
+# def input_strategy(input, parent_node=None, trace=[], node_list=[]):
+#     """Decide which parsing strategy we should follow checking whether the input is a list or a dict"""
+#     if isinstance(input, dict):
+#         trace = dict_parser(input, parent_node, node_list=node_list)
+
+#     elif isinstance(input, list):
+#         list_parser(input, parent_node, node_list=node_list)
+
+#     return trace
+
+# # TODO implement this in code to check response.json from api is valid, for each unexpected row we delete the key from the response before singer.write
+# schema = {}
+# data = {}
+# verified = input_strategy(schema)
+# final_traces = []
+
+# excluded_keys = {"type", "items", "properties"}
+
+# for verif in verified:
+#     if verif.key not in excluded_keys:
+#         final_traces.append(verif.key_nodes_list(excluded_keys))
+
+# # print("final_trace is : ", final_traces)
+
+# for trace in final_traces:
+#     print(data_validator(data, trace))
+
+
+# def get_abs_path(path: str) -> str:
+#     return os.path.join(os.path.dirname(os.path.realpath(__file__)), path)
 
 
 def load_schemas() -> Dict:
     """ Load schemas from schemas folder """
     schemas = {}
-    for filename in os.listdir(get_abs_path('schemas')):
-        path = get_abs_path('schemas') + '/' + filename
-        file_raw = filename.replace('.json', '')
-        with open(path) as file:
-            schemas[file_raw] = Schema.from_dict(json.load(file))
+    schema_available = {
+        "archive_content": ARCHIVE_CONTENT,
+    }
+    for table_name, schema in schema_available.items():
+        schemas[table_name] = Schema.from_dict(schema)
     return schemas
 
 
 def discover() -> object:
-    """ This discover schemas from shcemas folder and generates streams from them """
+    """ This discover schemas from schemas folder and generates streams from them """
     raw_schemas = load_schemas()
     streams = []
     for stream_id, schema in raw_schemas.items():

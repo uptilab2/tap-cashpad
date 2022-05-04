@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-from setuptools import setup
+from setuptools import setup, find_packages
 
 setup(
     name="tap-cashpad",
@@ -18,9 +18,5 @@ setup(
     [console_scripts]
     tap-cashpad=tap_cashpad:main
     """,
-    packages=["tap_cashpad"],
-    package_data={
-        "schemas": ["tap_cashpad/schemas/*.json"]
-    },
-    include_package_data=True,
+    packages=find_packages(),
 )
