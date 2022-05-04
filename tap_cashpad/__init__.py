@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-import os
-import json
+# import os
+# import json
 
 import singer
 from singer import utils
@@ -13,7 +13,7 @@ from requests.adapters import HTTPAdapter, Retry
 from typing import List, Dict
 from datetime import datetime
 
-from .schemas import ARCHIVE_CONTENT
+from .schemas import ARCHIVE_CONTENT, PRODUCTS_SUMMARY
 
 
 REQUIRED_CONFIG_KEYS = ["installation_id", "apiuser_email", "apiuser_token"]
@@ -136,6 +136,7 @@ def load_schemas() -> Dict:
     schemas = {}
     schema_available = {
         "archive_content": ARCHIVE_CONTENT,
+        "products_summary": PRODUCTS_SUMMARY,
     }
     for table_name, schema in schema_available.items():
         schemas[table_name] = Schema.from_dict(schema)
@@ -284,7 +285,7 @@ def sync(config: Dict, state: Dict, catalog: object) -> None:
         # Here we get list of ongoing data, that means the data retrived by this function are mutable and can change by
         # the time you call Cashpad API. We mark these data as not closed and append them to the target write.
         # Data analyst should take care of them later thanks to the ingestion date in order to get only fresh data.
-        live_data = get_live_closing(config)
+        # live_data = get_live_closing(config)
 
         singer.write_schema(
             stream_name=stream.tap_stream_id,
@@ -300,7 +301,7 @@ def sync(config: Dict, state: Dict, catalog: object) -> None:
             tap_data.extend(get_closed(config, closure_list))
 
         # live_data contain just one list we can append to tap_data
-        tap_data.append(live_data)
+        # tap_data.append(live_data)
 
         # Case where no new data at all
         if len(tap_data) == 0:
