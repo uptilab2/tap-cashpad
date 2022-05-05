@@ -14,7 +14,7 @@ from requests.adapters import HTTPAdapter, Retry
 from typing import List, Dict
 from datetime import datetime
 
-from .schemas import ARCHIVE_CONTENT, PRODUCTS_SUMMARY
+from .schemas import ARCHIVE_CONTENT, PRODUCTS_SUMMARY, LIVE_DATA
 
 
 REQUIRED_CONFIG_KEYS = ["installation_id", "apiuser_email", "apiuser_token"]
@@ -138,6 +138,7 @@ def load_schemas() -> Dict:
     schema_available = {
         "archive_content": ARCHIVE_CONTENT,
         "products_summary": PRODUCTS_SUMMARY,
+        "live_data": LIVE_DATA,
     }
     for table_name, schema in schema_available.items():
         schemas[table_name] = Schema.from_dict(schema)
@@ -158,13 +159,13 @@ def discover() -> object:
                 schema=schema,
                 key_properties=key_properties,
                 metadata=stream_metadata,
-                replication_key="sequential_id",
+                replication_key="sequential_id" if stream_id != "live_data" else None,
                 is_view=None,
                 database=None,
                 table=None,
                 row_count=None,
                 stream_alias=None,
-                replication_method="INCREMENTAL",
+                replication_method="INCREMENTAL" if stream_id != "live_data" else 'FULL_TABLE',
             )
         )
     return Catalog(streams)
@@ -226,18 +227,10 @@ def get_live_closing(config: Dict, sequential_id: int = None, version: int = Non
             LOGGER.info("No new live data available")
             return []
 
-        # These items are not sent by API, we fill them with None data to avoid error while writing data with singer.
-        live_data["id"] = None
-        live_data["sequential_id"] = None
-        live_data["date_created"] = None
-        live_data["user"] = None
-        live_data["range_begin_date"] = None
-        live_data["range_end_date"] = None
-
         # Mark data are ongoing
         live_data["is_closed"] = False
 
-        return live_data
+        return [live_data]
 
 
 def get_closed(config: Dict, closure_list: List) -> List:
@@ -319,10 +312,13 @@ def sync(config: Dict, state: Dict, catalog: object) -> None:
             LOGGER.info("No new closed data available")
         else:
             data = None
+            # TODO: maybe we should separate each object and have their own table
             if stream.tap_stream_id == 'products_summary':
                 data = get_product_summary(config, closure_list)
             elif stream.tap_stream_id == 'archive_content':
                 data = get_closed(config, closure_list)
+            elif stream.tap_stream_id == 'live_data':
+                data = get_live_closing(config)
             else:
                 LOGGER.error("Stream id not recognized")
                 raise Exception()
@@ -339,10 +335,11 @@ def sync(config: Dict, state: Dict, catalog: object) -> None:
         max_bookmark = None
         for row in tap_data:
             row["ingestion_date"] = batch_write_timestamp
-            row["is_closed"] = row.get("is_closed") if row.get("is_closed") is False else True
+            row["is_closed"] = row.get("is_closed") if row.get("is_closed", None) is False else True
             # Write row to the stream for target :
             parsed_row = transform(row, stream.schema.to_dict())
             singer.write_records(stream.tap_stream_id, [parsed_row])
+
             if bookmark_column and row.get("is_closed"):
                 if is_sorted:
                     # update bookmark to latest value
