@@ -305,6 +305,8 @@ def sync(config: Dict, state: Dict, catalog: object) -> None:
     # Loop over selected streams in catalog
     batch_write_timestamp = datetime.now().__str__()
 
+    new_state = state
+
     for stream in catalog.get_selected_streams(state):
 
         LOGGER.info("Syncing stream:" + stream.tap_stream_id)
@@ -315,8 +317,8 @@ def sync(config: Dict, state: Dict, catalog: object) -> None:
         start_sequential_id = None
         # Here we get list of closed data, that means the data retrived by this function are unmutable and can be
         # ingested by target safely
-        if state.get("value"):
-            start_sequential_id = state.get("value").get(stream.tap_stream_id, None)
+        if new_state:
+            start_sequential_id = new_state.get(stream.tap_stream_id, None)
             LOGGER.info(f'sequential_id started at: {start_sequential_id}')
         closure_list = get_closure_list(config, start_sequential_id)
         LOGGER.info(f'archive list sequential found: {closure_list}')
@@ -365,17 +367,21 @@ def sync(config: Dict, state: Dict, catalog: object) -> None:
             # Write row to the stream for target :
             parsed_row = transform(row, stream.schema.to_dict())
             singer.write_records(stream.tap_stream_id, [parsed_row])
+            LOGGER.info(new_state)
 
             if bookmark_column and row.get("is_closed"):
                 if is_sorted:
                     # update bookmark to latest value
-                    singer.write_state({stream.tap_stream_id: row[bookmark_column]})
+                    LOGGER.info(new_state)
+                    new_state = {**new_state, stream.tap_stream_id: row[bookmark_column]}
                 else:
                     # if data unsorted, save max value until end of writes
                     max_bookmark = max(max_bookmark, row[bookmark_column])
         if bookmark_column and not is_sorted and row.get("is_closed"):
-            singer.write_state({stream.tap_stream_id: max_bookmark})
-            
+            new_state = {**new_state, stream.tap_stream_id: max_bookmark}
+
+        LOGGER.info(new_state)
+        singer.write_state(new_state)
 
         LOGGER.info("Ending stream:" + stream.tap_stream_id)
     return
