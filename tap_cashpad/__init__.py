@@ -14,7 +14,7 @@ from requests.adapters import HTTPAdapter, Retry
 from typing import List, Dict
 from datetime import datetime
 
-from .schemas import ARCHIVE_CONTENT, PRODUCTS_SUMMARY, LIVE_DATA
+from .schemas import ARCHIVE_CONTENT, PRODUCTS_SUMMARY, LIVE_DATA, SALES_SUMMARY
 
 
 REQUIRED_CONFIG_KEYS = ["installation_id", "apiuser_email", "apiuser_token"]
@@ -139,6 +139,7 @@ def load_schemas() -> Dict:
         "archive_content": ARCHIVE_CONTENT,
         "products_summary": PRODUCTS_SUMMARY,
         "live_data": LIVE_DATA,
+        "sales_summary": SALES_SUMMARY,
     }
     for table_name, schema in schema_available.items():
         schemas[table_name] = Schema.from_dict(schema)
@@ -277,6 +278,28 @@ def get_product_summary(config: Dict, closure_list: List) -> List:
     return content_list
 
 
+def get_sales_summary(config: Dict, closure_list: List) -> List:
+    """ Get product_summary """
+    sales_summary = BASE_URL + config.get("installation_id") + "/sales_summary"
+    content_list = []
+    for closed in closure_list:
+        params = {
+            "sequential_id": closed.get("sequential_id"),
+            "apiuser_email": config.get("apiuser_email"),
+            "apiuser_token": config.get("apiuser_token"),
+        }
+        response = requests_session.get(sales_summary, params=params)
+
+        LOGGER.info(f"response status code is : {response.status_code}")
+
+        if response.status_code == 200:
+            content_list.append(response.json().get("data"))
+        elif response.status_code == 400:
+            LOGGER.error(f"The sequential_id: {closed.get('sequential_id')} requested doesn't exist")
+            continue
+    return content_list
+
+
 def sync(config: Dict, state: Dict, catalog: object) -> None:
     """ Sync data from tap source """
     # Loop over selected streams in catalog
@@ -315,6 +338,8 @@ def sync(config: Dict, state: Dict, catalog: object) -> None:
             # TODO: maybe we should separate each object and have their own table
             if stream.tap_stream_id == 'products_summary':
                 data = get_product_summary(config, closure_list)
+            elif stream.tap_stream_id == 'sales_summary':
+                data = get_sales_summary(config, closure_list)
             elif stream.tap_stream_id == 'archive_content':
                 data = get_closed(config, closure_list)
             elif stream.tap_stream_id == 'live_data':
