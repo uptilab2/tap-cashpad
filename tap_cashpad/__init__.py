@@ -122,7 +122,7 @@ requests_session.mount('', HTTPAdapter(max_retries=requests_retries))
 #     if verif.key not in excluded_keys:
 #         final_traces.append(verif.key_nodes_list(excluded_keys))
 
-# # print("final_trace is : ", final_traces)
+# # print("final_trace is: ", final_traces)
 
 # for trace in final_traces:
 #     print(data_validator(data, trace))
@@ -187,8 +187,10 @@ def get_closure_list(config: Dict, start_sequential_id: int = None) -> List:
         params["start_sequential_id"] = start_sequential_id + 1  # Add 1 to get next id
 
     closure_list = []
+    LOGGER.info(f"[archives] requesting data")
+
     response = requests_session.get(archive_url, params=params)
-    LOGGER.info(f"response status code is : {response.status_code}")
+    LOGGER.info(f"[archives] response status code is: {response.status_code}")
 
     if response.status_code == 200:
         for row in response.json().get("data"):
@@ -218,7 +220,10 @@ def get_live_closing(config: Dict, sequential_id: int = None, version: int = Non
     if version:
         params["version"] = version
 
+    LOGGER.info(f"[live_data] requesting data")
+
     response = requests_session.get(archive_url, params=params)
+    LOGGER.info(f"[live_data] response status code is: {response.status_code}")
 
     if response.status_code == 200:
         live_data = response.json().get("data")
@@ -244,9 +249,11 @@ def get_closed(config: Dict, closure_list: List) -> List:
             "apiuser_email": config.get("apiuser_email"),
             "apiuser_token": config.get("apiuser_token"),
         }
+        LOGGER.info(f"[archive_content] requesting data")
+
         response = requests_session.get(archive_content, params=params)
 
-        LOGGER.info(f"response status code is : {response.status_code}")
+        LOGGER.info(f"[archive_content] response status code is: {response.status_code}")
 
         if response.status_code == 200:
             content_list.append(response.json().get("data"))
@@ -266,9 +273,11 @@ def get_product_summary(config: Dict, closure_list: List) -> List:
             "apiuser_email": config.get("apiuser_email"),
             "apiuser_token": config.get("apiuser_token"),
         }
+        LOGGER.info(f"[products_summary] requesting data")
+
         response = requests_session.get(products_summary, params=params)
 
-        LOGGER.info(f"response status code is : {response.status_code}")
+        LOGGER.info(f"[products_summary] response status code is: {response.status_code}")
 
         if response.status_code == 200:
             content_list.append(response.json().get("data"))
@@ -288,9 +297,11 @@ def get_sales_summary(config: Dict, closure_list: List) -> List:
             "apiuser_email": config.get("apiuser_email"),
             "apiuser_token": config.get("apiuser_token"),
         }
+        LOGGER.info(f"......[sales_summary] requesting data")
+
         response = requests_session.get(sales_summary, params=params)
 
-        LOGGER.info(f"response status code is : {response.status_code}")
+        LOGGER.info(f"......[sales_summary] response status code is: {response.status_code}")
 
         if response.status_code == 200:
             content_list.append(response.json().get("data"))
@@ -309,7 +320,10 @@ def sync(config: Dict, state: Dict, catalog: object) -> None:
 
     for stream in catalog.get_selected_streams(state):
 
-        LOGGER.info("Syncing stream:" + stream.tap_stream_id)
+        LOGGER.info(f"[{stream.tap_stream_id}] ******** Starting sync stream ********")
+        LOGGER.info(f'[{stream.tap_stream_id}] info:')
+        LOGGER.info(f'......replication method: {stream.replication_method}')
+        LOGGER.info(f'......replication key: {stream.replication_key}')
 
         bookmark_column = stream.replication_key
         tap_data = []
@@ -319,9 +333,10 @@ def sync(config: Dict, state: Dict, catalog: object) -> None:
         # ingested by target safely
         if new_state:
             start_sequential_id = new_state.get(stream.tap_stream_id, None)
-            LOGGER.info(f'sequential_id started at: {start_sequential_id}')
+            LOGGER.info(f'[{stream.tap_stream_id}] state found')
+            LOGGER.info(f'[{stream.tap_stream_id}] last sequential_id sync: {start_sequential_id}')
         closure_list = get_closure_list(config, start_sequential_id)
-        LOGGER.info(f'archive list sequential found: {closure_list}')
+        LOGGER.info(f"[{stream.tap_stream_id}] sequential_ids to sync: {[c.get('sequential_id') for c in closure_list] if closure_list else 'None'}")
         # Here we get list of ongoing data, that means the data retrived by this function are mutable and can change by
         # the time you call Cashpad API. We mark these data as not closed and append them to the target write.
         # Data analyst should take care of them later thanks to the ingestion date in order to get only fresh data.
@@ -335,7 +350,7 @@ def sync(config: Dict, state: Dict, catalog: object) -> None:
 
         # Case where no more closed data
         if len(closure_list) == 0:
-            LOGGER.info("No new archive available")
+            LOGGER.info(f"[{stream.tap_stream_id}] No new archive available")
         else:
             data = None
             # TODO: maybe we should separate each object and have their own table
@@ -358,7 +373,7 @@ def sync(config: Dict, state: Dict, catalog: object) -> None:
 
         # Case where no new data at all
         if len(tap_data) == 0:
-            LOGGER.info("No new data available")
+            LOGGER.info(f"[{stream.tap_stream_id}] No new data available")
 
         max_bookmark = None
         for row in tap_data:
@@ -367,12 +382,10 @@ def sync(config: Dict, state: Dict, catalog: object) -> None:
             # Write row to the stream for target :
             parsed_row = transform(row, stream.schema.to_dict())
             singer.write_records(stream.tap_stream_id, [parsed_row])
-            LOGGER.info(new_state)
 
             if bookmark_column and row.get("is_closed"):
                 if is_sorted:
                     # update bookmark to latest value
-                    LOGGER.info(new_state)
                     new_state = {**new_state, stream.tap_stream_id: row[bookmark_column]}
                 else:
                     # if data unsorted, save max value until end of writes
@@ -380,10 +393,9 @@ def sync(config: Dict, state: Dict, catalog: object) -> None:
         if bookmark_column and not is_sorted and row.get("is_closed"):
             new_state = {**new_state, stream.tap_stream_id: max_bookmark}
 
-        LOGGER.info(new_state)
         singer.write_state(new_state)
 
-        LOGGER.info("Ending stream:" + stream.tap_stream_id)
+        LOGGER.info(f"[{stream.tap_stream_id}] ******** Ending sync stream ********")
     return
 
 
