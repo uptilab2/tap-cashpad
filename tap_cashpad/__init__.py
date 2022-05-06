@@ -244,12 +244,13 @@ def get_closed(config: Dict, closure_list: List) -> List:
     archive_content = BASE_URL + config.get("installation_id") + "/archive_content"
     content_list = []
     for closed in closure_list:
+        sequential_id = closed.get("sequential_id")
         params = {
-            "sequential_id": closed.get("sequential_id"),
+            "sequential_id": sequential_id,
             "apiuser_email": config.get("apiuser_email"),
             "apiuser_token": config.get("apiuser_token"),
         }
-        LOGGER.info(f"[archive_content] requesting data")
+        LOGGER.info(f"[archive_content] requesting data for sequential_id: {sequential_id}")
 
         response = requests_session.get(archive_content, params=params)
 
@@ -268,12 +269,13 @@ def get_product_summary(config: Dict, closure_list: List) -> List:
     products_summary = BASE_URL + config.get("installation_id") + "/products_summary"
     content_list = []
     for closed in closure_list:
+        sequential_id = closed.get("sequential_id")
         params = {
-            "sequential_id": closed.get("sequential_id"),
+            "sequential_id": sequential_id,
             "apiuser_email": config.get("apiuser_email"),
             "apiuser_token": config.get("apiuser_token"),
         }
-        LOGGER.info(f"[products_summary] requesting data")
+        LOGGER.info(f"[products_summary] requesting data for sequential_id: {sequential_id}")
 
         response = requests_session.get(products_summary, params=params)
 
@@ -292,16 +294,17 @@ def get_sales_summary(config: Dict, closure_list: List) -> List:
     sales_summary = BASE_URL + config.get("installation_id") + "/sales_summary"
     content_list = []
     for closed in closure_list:
+        sequential_id = closed.get("sequential_id")
         params = {
-            "sequential_id": closed.get("sequential_id"),
+            "sequential_id": sequential_id,
             "apiuser_email": config.get("apiuser_email"),
             "apiuser_token": config.get("apiuser_token"),
         }
-        LOGGER.info(f"......[sales_summary] requesting data")
+        LOGGER.info(f"[sales_summary] requesting data for sequential_id: {sequential_id}")
 
         response = requests_session.get(sales_summary, params=params)
 
-        LOGGER.info(f"......[sales_summary] response status code is: {response.status_code}")
+        LOGGER.info(f"[sales_summary] response status code is: {response.status_code}")
 
         if response.status_code == 200:
             content_list.append(response.json().get("data"))
@@ -327,21 +330,23 @@ def sync(config: Dict, state: Dict, catalog: object) -> None:
 
         bookmark_column = stream.replication_key
         tap_data = []
+        closure_list = []
         is_sorted = True
         start_sequential_id = None
-        # Here we get list of closed data, that means the data retrived by this function are unmutable and can be
-        # ingested by target safely
-        if new_state:
-            start_sequential_id = new_state.get(stream.tap_stream_id, None)
-            LOGGER.info(f'[{stream.tap_stream_id}] state found')
-            LOGGER.info(f'[{stream.tap_stream_id}] last sequential_id sync: {start_sequential_id}')
-        closure_list = get_closure_list(config, start_sequential_id)
-        LOGGER.info(f"[{stream.tap_stream_id}] sequential_ids to sync: {[c.get('sequential_id') for c in closure_list] if closure_list else 'None'}")
+
+        if stream.tap_stream_id != 'live_data':
+            # Here we get list of closed data, that means the data retrived by this function are unmutable and can be
+            # ingested by target safely
+            if new_state:
+                start_sequential_id = new_state.get(stream.tap_stream_id, None)
+                LOGGER.info(f'[{stream.tap_stream_id}] state found')
+                LOGGER.info(f'[{stream.tap_stream_id}] last sequential_id sync: {start_sequential_id}')
+            closure_list = get_closure_list(config, start_sequential_id)
+            LOGGER.info(f"[{stream.tap_stream_id}] sequential_ids to sync: {[c.get('sequential_id') for c in closure_list] if closure_list else 'None'}")
         # Here we get list of ongoing data, that means the data retrived by this function are mutable and can change by
         # the time you call Cashpad API. We mark these data as not closed and append them to the target write.
         # Data analyst should take care of them later thanks to the ingestion date in order to get only fresh data.
         # live_data = get_live_closing(config)
-
         singer.write_schema(
             stream_name=stream.tap_stream_id,
             schema=stream.schema.to_dict(),
@@ -349,11 +354,12 @@ def sync(config: Dict, state: Dict, catalog: object) -> None:
         )
 
         # Case where no more closed data
-        if len(closure_list) == 0:
+        if len(closure_list) == 0 and stream.tap_stream_id != 'live_data':
             LOGGER.info(f"[{stream.tap_stream_id}] No new archive available")
         else:
             data = None
             # TODO: maybe we should separate each object and have their own table
+            # and refacto request method like products_sum, sales_sum, archive_content is similar
             if stream.tap_stream_id == 'products_summary':
                 data = get_product_summary(config, closure_list)
             elif stream.tap_stream_id == 'sales_summary':
