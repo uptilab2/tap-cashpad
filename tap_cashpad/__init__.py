@@ -1,17 +1,21 @@
 #!/usr/bin/env python3
-import os
-import json
+# import os
+# import json
 
 import singer
 from singer import utils
 from singer.catalog import Catalog, CatalogEntry
 from singer.schema import Schema
+from singer.transform import transform
 
 import requests
 from requests.adapters import HTTPAdapter, Retry
 
 from typing import List, Dict
 from datetime import datetime
+
+from .schemas import ARCHIVE_CONTENT, PRODUCTS_SUMMARY, LIVE_DATA, SALES_SUMMARY
+
 
 REQUIRED_CONFIG_KEYS = ["installation_id", "apiuser_email", "apiuser_token"]
 VERSION = "v2"
@@ -25,122 +29,125 @@ requests_retries = Retry(total=5, backoff_factor=10, status_forcelist=http_retry
 requests_session.mount('', HTTPAdapter(max_retries=requests_retries))
 
 
-class Node:
-    """Node represents the keys of a schema and link a key to its parent. It is useful to get a list of parents for
-    a given key"""
+# class Node:
+#     """Node represents the keys of a schema and link a key to its parent. It is useful to get a list of parents for
+#     a given key"""
 
-    def __init__(self, key: str, parent=None):
-        self.parent = parent
-        if parent:
-            parent.set_child(self)
-        self.child = None
-        self.key = key
+#     def __init__(self, key: str, parent=None):
+#         self.parent = parent
+#         if parent:
+#             parent.set_child(self)
+#         self.child = None
+#         self.key = key
 
-    def set_child(self, child):
-        """this method is to change a parent's child"""
-        self.child = child
+#     def set_child(self, child):
+#         """this method is to change a parent's child"""
+#         self.child = child
 
-    def key_nodes_list(self, excluded_keys={}):
-        """This method give for a node all the genealogy of its familly sorted from the eldest parents to the node
-        itself """
-        list = []
-        parent = self.parent
+#     def key_nodes_list(self, excluded_keys={}):
+#         """This method give for a node all the genealogy of its familly sorted from the eldest parents to the node
+#         itself """
+#         list = []
+#         parent = self.parent
 
-        list = [self.key] if self.key not in excluded_keys else list
+#         list = [self.key] if self.key not in excluded_keys else list
 
-        have_parent = True if self.parent else False
-        while have_parent:
-            if isinstance(parent, Node):
-                if parent.key not in excluded_keys:
-                    list.append(parent.key)
-                parent = parent.parent
-            else:
-                have_parent = False
+#         have_parent = True if self.parent else False
+#         while have_parent:
+#             if isinstance(parent, Node):
+#                 if parent.key not in excluded_keys:
+#                     list.append(parent.key)
+#                 parent = parent.parent
+#             else:
+#                 have_parent = False
 
-        return list[::-1]
-
-
-def data_validator(schema, key_list):
-    """Compare a list of keys tracing the parents of an element to a schema.
-    It works by checking each key exist in the schema. And each path exist in the schema"""
-
-    for key in key_list:
-        if key in schema.keys():
-            schema = schema.get(key)
-        else:
-            return "faut supprimer"
-    return "ok"
+#         return list[::-1]
 
 
-def dict_parser(input, parent_node=[], node_list=[]):
-    """Parse a dict to extract for each key it's parents and instanciate a node for each keys linked to its parents"""
-    key_list = input.keys()
-    new_node = None
+# def data_validator(schema, key_list):
+#     """Compare a list of keys tracing the parents of an element to a schema.
+#     It works by checking each key exist in the schema. And each path exist in the schema"""
 
-    for key in key_list:
-        if key in key_list:
-            if isinstance(input, dict):
-                new_input = input.get(key)
-                new_node = Node(key, parent_node)
-                node_list.append(new_node)
-
-            input_strategy(new_input, parent_node=new_node, node_list=node_list)
-    return node_list
+#     for key in key_list:
+#         if key in schema.keys():
+#             schema = schema.get(key)
+#         else:
+#             return "faut supprimer"
+#     return "ok"
 
 
-def list_parser(input, parent_node, node_list):
-    """Parse a list in order to check for each elements the keys it contains"""
-    for element in input:
-        input_strategy(element, parent_node, node_list=node_list)
+# def dict_parser(input, parent_node=[], node_list=[]):
+#     """Parse a dict to extract for each key it's parents and instanciate a node for each keys linked to its parents"""
+#     key_list = input.keys()
+#     new_node = None
 
-    return
+#     for key in key_list:
+#         if key in key_list:
+#             if isinstance(input, dict):
+#                 new_input = input.get(key)
+#                 new_node = Node(key, parent_node)
+#                 node_list.append(new_node)
 
-
-def input_strategy(input, parent_node=None, trace=[], node_list=[]):
-    """Decide which parsing strategy we should follow checking whether the input is a list or a dict"""
-    if isinstance(input, dict):
-        trace = dict_parser(input, parent_node, node_list=node_list)
-
-    elif isinstance(input, list):
-        list_parser(input, parent_node, node_list=node_list)
-
-    return trace
-
-# TODO implement this in code to check response.json from api is valid, for each unexpected row we delete the key from the response before singer.write
-schema = {}
-data = {}
-verified = input_strategy(schema)
-final_traces = []
-
-excluded_keys = {"type", "items", "properties"}
-
-for verif in verified:
-    if verif.key not in excluded_keys:
-        final_traces.append(verif.key_nodes_list(excluded_keys))
-
-print("final_trace is : ", final_traces)
-
-for trace in final_traces:
-    print(data_validator(data, trace))
+#             input_strategy(new_input, parent_node=new_node, node_list=node_list)
+#     return node_list
 
 
-def get_abs_path(path: str) -> str:
-    return os.path.join(os.path.dirname(os.path.realpath(__file__)), path)
+# def list_parser(input, parent_node, node_list):
+#     """Parse a list in order to check for each elements the keys it contains"""
+#     for element in input:
+#         input_strategy(element, parent_node, node_list=node_list)
+
+#     return
+
+
+# def input_strategy(input, parent_node=None, trace=[], node_list=[]):
+#     """Decide which parsing strategy we should follow checking whether the input is a list or a dict"""
+#     if isinstance(input, dict):
+#         trace = dict_parser(input, parent_node, node_list=node_list)
+
+#     elif isinstance(input, list):
+#         list_parser(input, parent_node, node_list=node_list)
+
+#     return trace
+
+# # TODO implement this in code to check response.json from api is valid, for each unexpected row we delete the key from the response before singer.write
+# schema = {}
+# data = {}
+# verified = input_strategy(schema)
+# final_traces = []
+
+# excluded_keys = {"type", "items", "properties"}
+
+# for verif in verified:
+#     if verif.key not in excluded_keys:
+#         final_traces.append(verif.key_nodes_list(excluded_keys))
+
+# # print("final_trace is: ", final_traces)
+
+# for trace in final_traces:
+#     print(data_validator(data, trace))
+
+
+# def get_abs_path(path: str) -> str:
+#     return os.path.join(os.path.dirname(os.path.realpath(__file__)), path)
 
 
 def load_schemas() -> Dict:
     """ Load schemas from schemas folder """
     schemas = {}
-    for filename in os.listdir(get_abs_path('schemas')):
-        path = get_abs_path('schemas') + '/' + filename
-        file_raw = filename.replace('.json', '')
-        with open(path) as file:
-            schemas[file_raw] = Schema.from_dict(json.load(file))
+    schema_available = {
+        "archive_content": ARCHIVE_CONTENT,
+        "products_summary": PRODUCTS_SUMMARY,
+        "live_data": LIVE_DATA,
+        "sales_summary": SALES_SUMMARY,
+    }
+    for table_name, schema in schema_available.items():
+        schemas[table_name] = Schema.from_dict(schema)
     return schemas
 
 
 def discover() -> object:
-    """ This discover schemas from shcemas folder and generates streams from them """
+    """ This discover schemas from schemas folder and generates streams from them """
     raw_schemas = load_schemas()
     streams = []
     for stream_id, schema in raw_schemas.items():
@@ -153,13 +160,13 @@ def discover() -> object:
                 schema=schema,
                 key_properties=key_properties,
                 metadata=stream_metadata,
-                replication_key="sequential_id",
+                replication_key="sequential_id" if stream_id != "live_data" else None,
                 is_view=None,
                 database=None,
                 table=None,
                 row_count=None,
                 stream_alias=None,
-                replication_method="INCREMENTAL",
+                replication_method="INCREMENTAL" if stream_id != "live_data" else 'FULL_TABLE',
             )
         )
     return Catalog(streams)
@@ -180,9 +187,10 @@ def get_closure_list(config: Dict, start_sequential_id: int = None) -> List:
         params["start_sequential_id"] = start_sequential_id + 1  # Add 1 to get next id
 
     closure_list = []
+    LOGGER.info(f"[archives] requesting data")
+
     response = requests_session.get(archive_url, params=params)
-    LOGGER.info(f"response status code is : {response.status_code}")
-    LOGGER.info(f"response is : {response.text}")
+    LOGGER.info(f"[archives] response status code is: {response.status_code}")
 
     if response.status_code == 200:
         for row in response.json().get("data"):
@@ -212,7 +220,10 @@ def get_live_closing(config: Dict, sequential_id: int = None, version: int = Non
     if version:
         params["version"] = version
 
+    LOGGER.info(f"[live_data] requesting data")
+
     response = requests_session.get(archive_url, params=params)
+    LOGGER.info(f"[live_data] response status code is: {response.status_code}")
 
     if response.status_code == 200:
         live_data = response.json().get("data")
@@ -222,18 +233,10 @@ def get_live_closing(config: Dict, sequential_id: int = None, version: int = Non
             LOGGER.info("No new live data available")
             return []
 
-        # These items are not sent by API, we fill them with None data to avoid error while writing data with singer.
-        live_data["id"] = None
-        live_data["sequential_id"] = None
-        live_data["date_created"] = None
-        live_data["user"] = None
-        live_data["range_begin_date"] = None
-        live_data["range_end_date"] = None
-
         # Mark data are ongoing
         live_data["is_closed"] = False
 
-        return live_data
+        return [live_data]
 
 
 def get_closed(config: Dict, closure_list: List) -> List:
@@ -241,15 +244,67 @@ def get_closed(config: Dict, closure_list: List) -> List:
     archive_content = BASE_URL + config.get("installation_id") + "/archive_content"
     content_list = []
     for closed in closure_list:
+        sequential_id = closed.get("sequential_id")
         params = {
-            "sequential_id": closed.get("sequential_id"),
+            "sequential_id": sequential_id,
             "apiuser_email": config.get("apiuser_email"),
             "apiuser_token": config.get("apiuser_token"),
         }
+        LOGGER.info(f"[archive_content] requesting data for sequential_id: {sequential_id}")
+
         response = requests_session.get(archive_content, params=params)
 
-        LOGGER.info(f"response status code is : {response.status_code}")
-        LOGGER.info(f"response is : {response.text}")
+        LOGGER.info(f"[archive_content] response status code is: {response.status_code}")
+
+        if response.status_code == 200:
+            content_list.append(response.json().get("data"))
+        elif response.status_code == 400:
+            LOGGER.error(f"The sequential_id: {closed.get('sequential_id')} requested doesn't exist")
+            continue
+    return content_list
+
+
+def get_product_summary(config: Dict, closure_list: List) -> List:
+    """ Get product_summary """
+    products_summary = BASE_URL + config.get("installation_id") + "/products_summary"
+    content_list = []
+    for closed in closure_list:
+        sequential_id = closed.get("sequential_id")
+        params = {
+            "sequential_id": sequential_id,
+            "apiuser_email": config.get("apiuser_email"),
+            "apiuser_token": config.get("apiuser_token"),
+        }
+        LOGGER.info(f"[products_summary] requesting data for sequential_id: {sequential_id}")
+
+        response = requests_session.get(products_summary, params=params)
+
+        LOGGER.info(f"[products_summary] response status code is: {response.status_code}")
+
+        if response.status_code == 200:
+            content_list.append(response.json().get("data"))
+        elif response.status_code == 400:
+            LOGGER.error(f"The sequential_id: {closed.get('sequential_id')} requested doesn't exist")
+            continue
+    return content_list
+
+
+def get_sales_summary(config: Dict, closure_list: List) -> List:
+    """ Get product_summary """
+    sales_summary = BASE_URL + config.get("installation_id") + "/sales_summary"
+    content_list = []
+    for closed in closure_list:
+        sequential_id = closed.get("sequential_id")
+        params = {
+            "sequential_id": sequential_id,
+            "apiuser_email": config.get("apiuser_email"),
+            "apiuser_token": config.get("apiuser_token"),
+        }
+        LOGGER.info(f"[sales_summary] requesting data for sequential_id: {sequential_id}")
+
+        response = requests_session.get(sales_summary, params=params)
+
+        LOGGER.info(f"[sales_summary] response status code is: {response.status_code}")
 
         if response.status_code == 200:
             content_list.append(response.json().get("data"))
@@ -264,25 +319,34 @@ def sync(config: Dict, state: Dict, catalog: object) -> None:
     # Loop over selected streams in catalog
     batch_write_timestamp = datetime.now().__str__()
 
+    new_state = state
+
     for stream in catalog.get_selected_streams(state):
 
-        LOGGER.info("Syncing stream:" + stream.tap_stream_id)
+        LOGGER.info(f"[{stream.tap_stream_id}] ******** Starting sync stream ********")
+        LOGGER.info(f'[{stream.tap_stream_id}] info:')
+        LOGGER.info(f'......replication method: {stream.replication_method}')
+        LOGGER.info(f'......replication key: {stream.replication_key}')
 
         bookmark_column = stream.replication_key
         tap_data = []
+        closure_list = []
         is_sorted = True
         start_sequential_id = None
-        # Here we get list of closed data, that means the data retrived by this function are unmutable and can be
-        # ingested by target safely
-        if state.get("value"):
-            start_sequential_id = state.get("value").get(stream.tap_stream_id)
-        closure_list = get_closure_list(config, start_sequential_id)
 
+        if stream.tap_stream_id != 'live_data':
+            # Here we get list of closed data, that means the data retrived by this function are unmutable and can be
+            # ingested by target safely
+            if new_state:
+                start_sequential_id = new_state.get(stream.tap_stream_id, None)
+                LOGGER.info(f'[{stream.tap_stream_id}] state found')
+                LOGGER.info(f'[{stream.tap_stream_id}] last sequential_id sync: {start_sequential_id}')
+            closure_list = get_closure_list(config, start_sequential_id)
+            LOGGER.info(f"[{stream.tap_stream_id}] sequential_ids to sync: {[c.get('sequential_id') for c in closure_list] if closure_list else 'None'}")
         # Here we get list of ongoing data, that means the data retrived by this function are mutable and can change by
         # the time you call Cashpad API. We mark these data as not closed and append them to the target write.
         # Data analyst should take care of them later thanks to the ingestion date in order to get only fresh data.
-        live_data = get_live_closing(config)
-
+        # live_data = get_live_closing(config)
         singer.write_schema(
             stream_name=stream.tap_stream_id,
             schema=stream.schema.to_dict(),
@@ -290,34 +354,54 @@ def sync(config: Dict, state: Dict, catalog: object) -> None:
         )
 
         # Case where no more closed data
-        if len(closure_list) == 0:
-            LOGGER.info("No new closed data available")
+        if len(closure_list) == 0 and stream.tap_stream_id != 'live_data':
+            LOGGER.info(f"[{stream.tap_stream_id}] No new archive available")
         else:
+            data = None
+            # TODO: maybe we should separate each object and have their own table
+            # and refacto request method like products_sum, sales_sum, archive_content is similar
+            if stream.tap_stream_id == 'products_summary':
+                data = get_product_summary(config, closure_list)
+            elif stream.tap_stream_id == 'sales_summary':
+                data = get_sales_summary(config, closure_list)
+            elif stream.tap_stream_id == 'archive_content':
+                data = get_closed(config, closure_list)
+            elif stream.tap_stream_id == 'live_data':
+                data = get_live_closing(config)
+            else:
+                LOGGER.error("Stream id not recognized")
+                raise Exception()
             # get_closed return a list of list so we just extend it in tap_data
-            tap_data.extend(get_closed(config, closure_list))
+            tap_data.extend(data)
 
         # live_data contain just one list we can append to tap_data
-        tap_data.append(live_data)
+        # tap_data.append(live_data)
 
         # Case where no new data at all
         if len(tap_data) == 0:
-            LOGGER.info("No new data available")
+            LOGGER.info(f"[{stream.tap_stream_id}] No new data available")
 
         max_bookmark = None
         for row in tap_data:
             row["ingestion_date"] = batch_write_timestamp
-            row["is_closed"] = row.get("is_closed") if row.get("is_closed") is False else True
+            row["is_closed"] = row.get("is_closed") if row.get("is_closed", None) is False else True
             # Write row to the stream for target :
-            singer.write_records(stream.tap_stream_id, [row])
+            parsed_row = transform(row, stream.schema.to_dict())
+            singer.write_records(stream.tap_stream_id, [parsed_row])
+
             if bookmark_column and row.get("is_closed"):
                 if is_sorted:
                     # update bookmark to latest value
-                    singer.write_state({stream.tap_stream_id: row[bookmark_column]})
+                    new_state = {**new_state, stream.tap_stream_id: row[bookmark_column]}
                 else:
                     # if data unsorted, save max value until end of writes
                     max_bookmark = max(max_bookmark, row[bookmark_column])
         if bookmark_column and not is_sorted and row.get("is_closed"):
-            singer.write_state({stream.tap_stream_id: max_bookmark})
+            new_state = {**new_state, stream.tap_stream_id: max_bookmark}
+
+        singer.write_state(new_state)
+
+        LOGGER.info(f"[{stream.tap_stream_id}] ******** Ending sync stream ********")
     return
 
 
