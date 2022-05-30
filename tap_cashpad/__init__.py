@@ -19,7 +19,7 @@ from .schemas import ARCHIVE_CONTENT, PRODUCTS_SUMMARY, LIVE_DATA, SALES_SUMMARY
 
 REQUIRED_CONFIG_KEYS = ["installation_id", "apiuser_email", "apiuser_token"]
 VERSION = "v2"
-BASE_URL = f"https://preprod.cashpad.net/api/salesdata/{VERSION}/"
+BASE_URL = f"https://www6.cashpad.net/api/salesdata/{VERSION}/"
 LOGGER = singer.get_logger()
 
 # This will allow to query with requests_retries which include exponetial backoff retry instead of requests
